@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Upload KTP Image</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-gray-100">
+    <div class="flex items-center justify-center min-h-screen">
+      <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center mb-6">Upload KTP Image</h2>
+        <form method="post" enctype="multipart/form-data">
+          <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="image">
+              Select Image File
+            </label>
+            <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" id="image" name="image" type="file" accept="image/*" required>
+          </div>
+          <button class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:shadow-outline" type="submit">
+            Upload and Validate
+          </button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

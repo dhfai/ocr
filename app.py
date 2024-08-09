@@ -1,131 +1,97 @@
+from flask import Flask, request, render_template, redirect, url_for
 import os
-import cv2
 import pytesseract
-from pytesseract import Output
+from PIL import Image
 import numpy as np
+import cv2
+import mysql.connector
+from mysql.connector import Error
 
-# Path to tesseract executable
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Function to check the background color of the image
-def validate_background_color(image):
-    # Convert image to HSV color space
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    
-    # Define range for the background color (light blue background)
-    lower_blue = np.array([80, 20, 70], dtype=np.uint8)
-    upper_blue = np.array([140, 255, 255], dtype=np.uint8)
-    
-    # Create mask to detect background color
-    mask = cv2.inRange(hsv, lower_blue, upper_blue)
-    
-    # Calculate the percentage of the background color in the image
-    blue_pixels = cv2.countNonZero(mask)
-    total_pixels = image.shape[0] * image.shape[1]
-    blue_pixel_percentage = (blue_pixels / total_pixels) * 100
-    
-    # If more than 50% of the pixels are blue, assume valid background
-    if blue_pixel_percentage > 50:
-        return True
+# Ensure the upload folder exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+def is_ktp(image_path):
+    image = Image.open(image_path)
+    image_np = np.array(image)
+
+    # Check if the image is grayscale (single channel)
+    if len(image_np.shape) == 2 or image_np.shape[2] == 1:
+        # Convert grayscale image to RGB by duplicating the single channel
+        image_np = cv2.cvtColor(image_np, cv2.COLOR_GRAY2RGB)
+
+    # Convert the RGB image to HSV
+    image_hsv = cv2.cvtColor(image_np, cv2.COLOR_RGB2HSV)
+
+    lower_blue = np.array([90, 50, 50])
+    upper_blue = np.array([140, 255, 255])
+
+    mask = cv2.inRange(image_hsv, lower_blue, upper_blue)
+    blue_ratio = cv2.countNonZero(mask) / (image_hsv.shape[0] * image_hsv.shape[1])
+
+    color_check = blue_ratio > 0.1
+
+    text = pytesseract.image_to_string(image)
+    ktp_keywords = ["REPUBLIK INDONESIA", "NIK", "Nama", "Tempat/Tgl Lahir", "Alamat", "RT/RW", "Kel/Desa", "Kecamatan", "Agama", "Status Perkawinan", "Pekerjaan", "Kewarganegaraan"]
+
+    text_check = any(keyword.lower() in text.lower() for keyword in ktp_keywords)
+
+    if text_check and color_check:
+        return "VALID", text
+    elif not text_check:
+        return "TIDAK VALID", "Text tidak sesuai dengan format KTP"
+    elif not color_check:
+        return "TIDAK VALID", "Warna background tidak sesuai dengan KTP"
     else:
-        return False
+        return "TIDAK VALID", "Gagal mengenali KTP"
 
-# Function to preprocess the image
-def preprocess_image(image_path):
-    # Check if file exists
-    if not os.path.exists(image_path):
-        print(f"Error: File '{image_path}' not found.")
-        return None
+def save_to_database(filename, is_valid):
+    try:
+        connection = mysql.connector.connect(
+            host='if.unismuh.ac.id',
+            database='ocr',
+            user='root',
+            password='mariabelajar',
+            port=3388
+        )
 
-    # Load image
-    image = cv2.imread(image_path)
-    if image is None:
-        print(f"Error: Unable to read '{image_path}'. Check file path/integrity.")
-        return None
+        if connection.is_connected():
+            cursor = connection.cursor()
+            insert_query = """INSERT INTO ktp_validation (filename, is_valid) VALUES (%s, %s)"""
+            record = (filename, is_valid)
+            cursor.execute(insert_query, record)
+            connection.commit()
 
-    # Validate background color
-    if not validate_background_color(image):
-        print("Error: Invalid background color.")
-        return None
+    except Error as e:
+        print(f"Error while connecting to MySQL: {e}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 
-    # Convert to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
-    # Apply Gaussian blur to reduce noise and improve OCR accuracy
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    
-    # Apply adaptive thresholding to preprocess the image
-    thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-    
-    # Apply morphological operations to remove noise
-    kernel = np.ones((1, 1), np.uint8)
-    morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-    morph = cv2.morphologyEx(morph, cv2.MORPH_OPEN, kernel)
-    
-    return morph
+@app.route('/', methods=['GET', 'POST'])
+def upload_image():
+    if request.method == 'POST':
+        if 'image' not in request.files:
+            return redirect(request.url)
+        file = request.files['image']
+        if file.filename == '':
+            return redirect(request.url)
+        if file:
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(filepath)
+            is_valid, details = is_ktp(filepath)
+            save_to_database(file.filename, is_valid)
+            return render_template('result.html', filename=file.filename, is_valid=is_valid, details=details)
+    return render_template('upload.html')
 
-# Function to extract text using Tesseract OCR
-def extract_text(image):
-    # Use Tesseract to extract text
-    text = pytesseract.image_to_string(image, lang='eng', config='--psm 6')
-    return text
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return redirect(url_for('static', filename='uploads/' + filename), code=301)
 
-# Function to detect KTP components
-def detect_ktp_components(image):
-    # Use Tesseract to extract data with bounding boxes
-    data = pytesseract.image_to_data(image, output_type=Output.DICT)
-    n_boxes = len(data['text'])
-    
-    for i in range(n_boxes):
-        if int(data['conf'][i]) > 60:  # Confidence threshold
-            (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
-            image = cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            image = cv2.putText(image, data['text'][i], (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
-    
-    return image, data
-
-# Function to validate the structure of KTP
-def validate_ktp(text):
-    required_fields = ["NIK", "Nama", "Tempat/Tgl Lahir", "Alamat", "RT/RW", "Kel/Desa", "Kecamatan", "Agama", "Status Perkawinan", "Pekerjaan", "Kewarganegaraan", "Berlaku Hingga"]
-    
-    valid = True
-    for field in required_fields:
-        if field not in text:
-            valid = False
-            break
-    
-    return valid
-
-# Main function to process a single image
-def process_image(image_path):
-    preprocessed_image = preprocess_image(image_path)
-    if preprocessed_image is None:
-        return
-    
-    text = extract_text(preprocessed_image)
-    
-    print(f"Extracted Text from {image_path}:")
-    print(text)
-    
-    is_valid = validate_ktp(text)
-    if is_valid:
-        print(f"KTP from {image_path} is valid.")
-    else:
-        print(f"KTP from {image_path} is invalid.")
-    
-    ktp_image, data = detect_ktp_components(preprocessed_image)
-    output_image_path = f"output_{os.path.basename(image_path)}"
-    cv2.imwrite(output_image_path, ktp_image)
-    print(f"Detected KTP components saved to {output_image_path}")
-
-# Main function to process all images in a directory
-def process_all_images(directory_path):
-    for filename in os.listdir(directory_path):
-        if filename.endswith(".jpg") or filename.endswith(".png"):
-            image_path = os.path.join(directory_path, filename)
-            process_image(image_path)
-
-# Example usage
 if __name__ == "__main__":
-    directory_path = 'data'  # The directory containing the images
-    process_all_images(directory_path)
+    app.run(debug=True)
