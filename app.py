@@ -35,19 +35,20 @@ def is_ktp(image_path):
 
     color_check = blue_ratio > 0.1
 
+    if not color_check:
+        return "TIDAK VALID", "Warna background tidak sesuai dengan KTP"
+
+
+
     text = pytesseract.image_to_string(image)
     ktp_keywords = ["REPUBLIK INDONESIA", "NIK", "Nama", "Tempat/Tgl Lahir", "Alamat", "RT/RW", "Kel/Desa", "Kecamatan", "Agama", "Status Perkawinan", "Pekerjaan", "Kewarganegaraan"]
 
     text_check = any(keyword.lower() in text.lower() for keyword in ktp_keywords)
 
-    if text_check and color_check:
+    if text_check:
         return "VALID", text
-    elif not text_check:
-        return "TIDAK VALID", "Text tidak sesuai dengan format KTP"
-    elif not color_check:
-        return "TIDAK VALID", "Warna background tidak sesuai dengan KTP"
     else:
-        return "TIDAK VALID", "Gagal mengenali KTP"
+        return "TIDAK VALID", "Text tidak sesuai dengan format KTP"
 
 def save_to_database(filename, is_valid):
     try:
