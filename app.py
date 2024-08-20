@@ -15,6 +15,12 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# List of allowed extensions
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def is_ktp(image_path):
     image = Image.open(image_path)
     image_np = np.array(image)
@@ -37,8 +43,6 @@ def is_ktp(image_path):
 
     if not color_check:
         return "TIDAK VALID", "Warna background tidak sesuai dengan KTP"
-
-
 
     text = pytesseract.image_to_string(image)
     ktp_keywords = ["REPUBLIK INDONESIA", "NIK", "Nama", "Tempat/Tgl Lahir", "Alamat", "RT/RW", "Kel/Desa", "Kecamatan", "Agama", "Status Perkawinan", "Pekerjaan", "Kewarganegaraan"]
@@ -82,7 +86,7 @@ def upload_image():
         file = request.files['image']
         if file.filename == '':
             return redirect(request.url)
-        if file:
+        if file and allowed_file(file.filename):
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(filepath)
             is_valid, details = is_ktp(filepath)
