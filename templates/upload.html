@@ -6,22 +6,56 @@
     <title>Upload KTP Image</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
   </head>
-  <body class="bg-gray-100">
+  <body class="bg-gray-200">
     <div class="flex items-center justify-center min-h-screen">
-      <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 class="text-2xl font-bold text-center mb-6">Upload KTP Image</h2>
+      <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
+        <!-- Title -->
+        <h2 class="text-3xl font-extrabold text-center text-gray-800 mb-2">UNGGAH GAMBAR KTP</h2>
+        
+        <!-- Description -->
+        <p class="text-center text-gray-600 mb-6">Silakan upload gambar KTP Anda untuk keperluan verifikasi.</p>
+        
         <form method="post" enctype="multipart/form-data">
-          <div class="mb-4">
+          <!-- File Input -->
+          <div class="mb-6">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="image">
-              Select Image File
+              Pilih gambar KTP
             </label>
             <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" id="image" name="image" type="file" accept="image/*" required>
           </div>
-          <button class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:shadow-outline" type="submit">
-            Upload and Validate
+          
+          <!-- Preview Uploaded Image -->
+          <div id="preview-container" class="hidden mb-6">
+            <h3 class="text-gray-700 text-sm font-bold mb-2">Pertinjau:</h3>
+            <img id="image-preview" class="rounded-lg border border-gray-300 w-full" src="#" alt="Image Preview">
+          </div>
+          
+          <!-- Submit Button -->
+          <button class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:shadow-outline" type="submit">
+            Unggah dan Validasi
           </button>
         </form>
       </div>
     </div>
+
+    <script>
+      // JavaScript to preview the uploaded image
+      document.getElementById('image').addEventListener('change', function(event) {
+        const previewContainer = document.getElementById('preview-container');
+        const previewImage = document.getElementById('image-preview');
+        
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            previewContainer.classList.remove('hidden');
+          };
+          reader.readAsDataURL(file);
+        } else {
+          previewContainer.classList.add('hidden');
+        }
+      });
+    </script>
   </body>
 </html>

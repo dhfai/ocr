@@ -1,31 +1,57 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Validation Result</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-  </head>
-  <body class="bg-gray-100">
-    <div class="flex items-center justify-center min-h-screen">
-      <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-lg">
-        <h2 class="text-3xl font-bold text-center mb-6">Validation Result</h2>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-md max-w-lg mx-auto w-full">
+        <!-- Validation Icon -->
+        <div class="flex justify-center mb-4">
+            {% if is_valid == 'VALID' %}
+            <svg class="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2l4-4"></path>
+            </svg>
+            {% else %}
+            <svg class="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            {% endif %}
+        </div>
+
+        <!-- Title -->
+        <h2 class="text-xl font-semibold text-center text-gray-800 mb-4">Hasil Validasi</h2>
+
+        <!-- Validation Status -->
         <p class="text-lg text-center mb-4">
-          <strong>Validation Status:</strong> 
-          <span class="{{ 'text-green-500' if is_valid == 'VALID' else 'text-red-500' }}">{{ is_valid }}</span>
+            <strong>Status:</strong>
+            <span class="{{ 'text-green-500' if is_valid == 'VALID' else 'text-red-500' }}">{{ is_valid }}</span>
         </p>
-        <div class="bg-gray-100 p-4 rounded-lg text-sm text-gray-800 leading-relaxed">
-          <strong>Details:</strong>
-          <div class="mt-2 whitespace-pre-wrap">
-            {{ details | replace("=", ":") | replace(";", "") | replace(">", "") }}
-          </div>
+
+        <!-- Details -->
+        <div class="bg-gray-50 p-4 rounded-lg text-gray-700 text-sm mb-4">
+            <strong>Detail:</strong>
+            <div class="mt-2 whitespace-pre-wrap leading-relaxed">
+                {{ details | replace("=", ":") | replace(";", "") | replace(">", "") }}
+            </div>
         </div>
-        <div class="text-center mt-6">
-          <a href="{{ url_for('upload_image') }}" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:shadow-outline">
-            Upload Another Image
-          </a>
+
+        <!-- Action Button -->
+        <div class="text-center">
+            <a href="{{ url_for('upload_image') }}"
+                class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
+                Unggah gambar lain
+            </a>
         </div>
-      </div>
     </div>
-  </body>
+
+</body>
+
 </html>
